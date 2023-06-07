@@ -1,0 +1,27 @@
+[
+    {
+        "class": "Cricket",
+        "students": 24,
+        "image": "https://i.ibb.co/ZM65dxN/R-2.jpg"
+    },
+    {
+        "class": "FoodBoll",
+        "students": 21,
+        "image": "https://i.ibb.co/Njyhcbb/OIP.jpg"
+    },
+    {
+        "class": "Basketball",
+        "students": 29,
+        "image": "https://i.ibb.co/DkGTbKw/R-4.jpg"
+    },
+    {
+        "class": "Running",
+        "students": 22,
+        "image": "https://i.ibb.co/R3X5cCK/R-3.jpg"
+    },
+    {
+        "class": "Baseball",
+        "students": 25,
+        "image": "https://i.ibb.co/zSrHvN0/OIP-3.jpg"
+    }
+]
