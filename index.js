@@ -11,21 +11,20 @@ app.use(express.json());
 
 const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
-  if(!authorization) {
-    return res.status(401).send({ error: true, message: 'unauthorized access'});
+  if (!authorization) {
+    return res.status(401).send({ error: true, message: 'unauthorized access' });
   }
   const token = authorization.split(' ')[1];
 
   jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
-    if(err) {
-      return res.status(401).send({ error: true, message: 'unauthorized access'})
+    if (err) {
+      return res.status(401).send({ error: true, message: 'unauthorized access' })
     }
     req.decoded = decoded;
 
     next();
   })
 }
-
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.USER_DB}:${process.env.PASS_DB}@cluster0.np7fjqr.mongodb.net/?retryWrites=true&w=majority`;
@@ -53,6 +52,16 @@ async function run() {
       res.send({ token });
     })
 
+    const verifyRole = async(req, res, next) => {
+      const email = req.decoded.email;
+      const query = {email: email}
+      const user = await usersCollection.findOne(query);
+      if(user?.role !== 'admin' || user?.role !== 'instructor' || user?.role !== 'student') {
+        return res.status(403).send({ error: true, message: 'forbidden access'})
+      }
+      next();
+    }
+
     app.get('/class', async (req, res) => {
       const result = await classesCollection.find({}).toArray();
       res.send(result);
@@ -69,12 +78,27 @@ async function run() {
         res.send([]);
       }
 
-      if(req.decoded.email !== email) {
-        res.send({admin: false})
+      const decodedEmail = req.decoded.email;
+      if(email !== decodedEmail) {
+        return res.status(403).send({ error: true, message: 'forbidden access'})
       }
-      
+
       const query = { email: email };
       const result = await cartCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.get('/user/role/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      const decodedEmail = req.decoded.email;
+      if(email !== decodedEmail) {
+        res.send({role: "student"});
+      }
+
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+      const result = { role: user?.role }
       res.send(result);
     })
 
@@ -113,7 +137,7 @@ async function run() {
       const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
     })
-    
+
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
