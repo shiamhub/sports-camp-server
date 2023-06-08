@@ -2,26 +2,46 @@
     {
         "class": "Cricket",
         "students": 24,
-        "image": "https://i.ibb.co/ZM65dxN/R-2.jpg"
+        "image": "https://i.ibb.co/ZM65dxN/R-2.jpg",
+        "insImage": "https://i.ibb.co/612hXWh/R-5.jpg",
+        "insName": "jon bae",
+        "set": 50,
+        "Price": 500
     },
     {
         "class": "FoodBoll",
         "students": 21,
-        "image": "https://i.ibb.co/Njyhcbb/OIP.jpg"
+        "image": "https://i.ibb.co/Njyhcbb/OIP.jpg",
+        "insImage": "https://i.ibb.co/612hXWh/R-5.jpg",
+        "insName": "jon bae",
+        "set": 50,
+        "Price": 500
     },
     {
         "class": "Basketball",
         "students": 29,
-        "image": "https://i.ibb.co/DkGTbKw/R-4.jpg"
+        "image": "https://i.ibb.co/DkGTbKw/R-4.jpg",
+        "insImage": "https://i.ibb.co/xzSQwwS/OIP-5.jpg",
+        "insName": "jon bae",
+        "set": 50,
+        "Price": 500
     },
     {
         "class": "Running",
         "students": 22,
-        "image": "https://i.ibb.co/R3X5cCK/R-3.jpg"
+        "image": "https://i.ibb.co/R3X5cCK/R-3.jpg",
+        "insImage": "https://i.ibb.co/B4Mh5sL/R-6.jpg",
+        "insName": "jon bae",
+        "set": 50,
+        "Price": 500
     },
     {
         "class": "Baseball",
         "students": 25,
-        "image": "https://i.ibb.co/zSrHvN0/OIP-3.jpg"
+        "image": "https://i.ibb.co/zSrHvN0/OIP-3.jpg",
+        "insImage": "https://i.ibb.co/pwNSzRF/OIP-4.jpg",
+        "insName": "jon bae",
+        "set": 50,
+        "Price": 500
     }
 ]
