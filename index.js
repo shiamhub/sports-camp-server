@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const port = process.env.PORT || 5000;
@@ -25,6 +26,13 @@ async function run() {
 
     const classesCollection = client.db("sportsDB").collection("classes");
     const usersCollection = client.db("sportsDB").collection("users");
+    const cartCollection = client.db("sportsDB").collection("cart");
+
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
+      res.send({ token });
+    })
 
     app.get('/class', async (req, res) => {
       const result = await classesCollection.find({}).toArray();
@@ -33,6 +41,10 @@ async function run() {
 
     app.get('/users', async (req, res) => {
       const result = await usersCollection.find({}).toArray();
+      res.send(result);
+    })
+    app.get('/addCart', async (req, res) => {
+      const result = await cartCollection.find({}).toArray();
       res.send(result);
     })
 
@@ -44,6 +56,12 @@ async function run() {
         return res.send({ message: 'user already exists' })
       }
       const result = await usersCollection.insertOne(user);
+      res.send(result);
+    })
+
+    app.post('/addCart', async (req, res) => {
+      const query = req.body;
+      const result = await cartCollection.insertOne(query);
       res.send(result);
     })
 
