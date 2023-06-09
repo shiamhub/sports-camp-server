@@ -44,6 +44,7 @@ async function run() {
     const classesCollection = client.db("sportsDB").collection("classes");
     const usersCollection = client.db("sportsDB").collection("users");
     const cartCollection = client.db("sportsDB").collection("cart");
+    const newCollection = client.db("sportsDB").collection("new");
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -56,18 +57,32 @@ async function run() {
       const email = req.decoded.email;
       const query = {email: email}
       const user = await usersCollection.findOne(query);
-      if(user?.role !== 'admin' || user?.role !== 'instructor' || user?.role !== 'student') {
-        return res.status(403).send({ error: true, message: 'forbidden access'})
+      if(user?.role === 'admin') {
+        next();
+        return 
       }
-      next();
+      if(user?.role === 'instructor') {
+        next();
+        return
+      }
+      if(user?.role === 'student') {
+        next();
+        return
+      }
+      return res.status(403).send({ error: true, message: 'forbidden access'})
+
     }
 
     app.get('/class', async (req, res) => {
       const result = await classesCollection.find({}).toArray();
       res.send(result);
     })
+    app.get('/classes', verifyJWT, async (req, res) => {
+      const result = await classesCollection.find({}).toArray();
+      res.send(result);
+    })
 
-    app.get('/users', async (req, res) => {
+    app.get('/users', verifyJWT, verifyRole, async (req, res) => {
       const result = await usersCollection.find({}).toArray();
       res.send(result);
     })
@@ -99,6 +114,30 @@ async function run() {
       const query = { email: email }
       const user = await usersCollection.findOne(query);
       const result = { role: user?.role }
+      res.send(result);
+    })
+
+    app.get('/newClasses', verifyJWT, async (req, res) => {
+      const result = await newCollection.find({}).toArray();
+      res.send(result);
+    })
+
+    app.get('/newClasses/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await newCollection.findOne(query);
+      res.send(result);
+    })
+
+    app.post('/newClasses', verifyJWT, async (req, res) => {
+      const newClass = req.body;
+      const result = await newCollection.insertOne(newClass);
+      res.send(result);
+    })
+
+    app.post('/newClasses/approved', verifyJWT, async (req, res) => {
+      const newClass = req.body;
+      const result = await classesCollection.insertOne(newClass);
       res.send(result);
     })
 
@@ -135,6 +174,20 @@ async function run() {
         $set: { role: 'instructor' }
       }
       const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+    })
+    
+    app.delete('/newClasses/denied/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const query = { nid: id };
+      const result = await classesCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    app.delete('/userDelete/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
       res.send(result);
     })
 
