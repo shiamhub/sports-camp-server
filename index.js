@@ -52,7 +52,7 @@ async function run() {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
       // console.log({token});
-      res.send({ token });
+      return res.send({ token });
     })
 
     const verifyRole = async (req, res, next) => {
@@ -76,22 +76,22 @@ async function run() {
 
     app.get('/class', async (req, res) => {
       const result = await classesCollection.find({}).toArray();
-      res.send(result);
+      return res.send(result);
     })
     app.get('/classes', verifyJWT, verifyRole, async (req, res) => {
       const result = await classesCollection.find({}).toArray();
-      res.send(result);
+      return res.send(result);
     })
 
     app.get('/users', verifyJWT, verifyRole, async (req, res) => {
       const result = await usersCollection.find({}).toArray();
-      res.send(result);
+      return res.send(result);
     })
 
     app.get('/addCart', verifyJWT, verifyRole, async (req, res) => {
       const email = req.query.email;
       if (!email) {
-        res.send([]);
+        return res.send([]);
       }
 
       const decodedEmail = req.decoded.email;
@@ -101,7 +101,7 @@ async function run() {
 
       const query = { email: email };
       const result = await cartCollection.find(query).toArray();
-      res.send(result);
+      return res.send(result);
     })
 
     app.get('/user/role/:email', verifyJWT, verifyRole, async (req, res) => {
@@ -109,58 +109,74 @@ async function run() {
 
       const decodedEmail = req.decoded.email;
       if (email !== decodedEmail) {
-        res.send({ role: "student" });
+        return res.send({ role: "student" });
       }
 
       const query = { email: email }
       const user = await usersCollection.findOne(query);
       const result = { role: user?.role }
-      res.send(result);
+      return res.send(result);
     })
 
     app.get('/newClasses', verifyJWT, verifyRole, async (req, res) => {
       const result = await newCollection.find({}).toArray();
-      res.send(result);
+      return res.send(result);
     })
 
     app.get('/newClasses/:id', verifyJWT, verifyRole, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await newCollection.findOne(query);
-      res.send(result);
+      return res.send(result);
     })
 
-    app.get('/paymentHistory', async (req, res) => {
-      const inResult = await paymentsCollection.find({}).toArray();
+    app.get('/paymentsHistory', async (req, res) => {
+      const query = { email: req.query.email };
+      const inResult = await paymentsCollection.find(query).toArray();
+      // console.log(inResult);
 
       for(let i of inResult){
         const findGet = i.addCartItems;
         const query = {
           _id: { $in: findGet?.map(a => new ObjectId(a)) }
         }
-        // console.log(query);
+        console.log(query);
         const result = await classesCollection.find(query).toArray();
         // console.log(result);
         return res.send(result);
       }
+      
     })
 
     app.get('/myClasses', verifyJWT, verifyRole, async (req, res) => {
       const query = { instructorEmail: req.query.email };
       const result = await classesCollection.find(query).toArray();
-      res.send(result);
+      return res.send(result);
+    })
+
+    app.get('/addCartPayment/:id', verifyJWT, verifyRole, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.findOne(query);
+      return res.send(result);
+    })
+    app.get('/addCart/:id', verifyJWT, verifyRole, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.findOne(query);
+      return res.send(result);
     })
 
     app.post('/newClasses', verifyJWT, verifyRole, async (req, res) => {
       const newClass = req.body;
       const result = await newCollection.insertOne(newClass);
-      res.send(result);
+      return res.send(result);
     })
 
     app.post('/classes/approved', verifyJWT, async (req, res) => {
       const newClass = req.body;
       const result = await classesCollection.insertOne(newClass);
-      res.send(result);
+      return res.send(result);
     })
 
     app.post('/users', async (req, res) => {
@@ -171,13 +187,13 @@ async function run() {
         return res.send({ message: 'user already exists' })
       }
       const result = await usersCollection.insertOne(user);
-      res.send(result);
+      return res.send(result);
     })
 
     app.post('/addCart', async (req, res) => {
       const query = req.body;
       const result = await cartCollection.insertOne(query);
-      res.send(result);
+      return res.send(result);
     })
 
     app.post('/create-payment-intent', verifyJWT, async (req, res) => {
@@ -189,17 +205,20 @@ async function run() {
         currency: 'usd',
         payment_method_types: ['card']
       })
-      res.send({ clientSecret: paymentIntent.client_secret })
+      return res.send({ clientSecret: paymentIntent.client_secret })
     });
 
     app.post('/payments', verifyJWT,  async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentsCollection.insertOne(payment);
-      const query = {
-        _id: { $in: payment.cartItems.map(item => new ObjectId(item)) }
-      }
+      console.log(insertResult);
+      // const query = {
+      //   _id: { $in: new ObjectId(payment.cartItems) }
+      // }
+      const query = { _id: new ObjectId(payment.cartItems) }
+
       const deleteResult = await cartCollection.deleteMany(query);
-      res.send({ insertResult, deleteResult });
+      return res.send({ insertResult, deleteResult });
     })
 
     app.patch('/user/admin/:id', verifyJWT, async (req, res) => {
@@ -209,7 +228,7 @@ async function run() {
         $set: { role: 'admin' }
       }
       const result = await usersCollection.updateOne(query, updateDoc);
-      res.send(result);
+      return res.send(result);
     })
 
     app.patch('/user/instructor/:id', verifyJWT, async (req, res) => {
@@ -219,7 +238,7 @@ async function run() {
         $set: { role: 'instructor' }
       }
       const result = await newCollection.updateOne(query, updateDoc);
-      res.send(result);
+      return res.send(result);
     })
     app.patch('/newClasses/approved/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
@@ -228,7 +247,7 @@ async function run() {
         $set: { status: 'approved' }
       }
       const result = await newCollection.updateOne(query, updateDoc);
-      res.send(result);
+      return res.send(result);
     })
     app.patch('/newClasses/denied/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
@@ -237,28 +256,28 @@ async function run() {
         $set: { status: 'denied' }
       }
       const result = await newCollection.updateOne(query, updateDoc);
-      res.send(result);
+      return res.send(result);
     })
 
     app.delete('/addCart/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await cartCollection.deleteOne(query)
-      res.send(result)
+      return res.send(result);
     })
 
     app.delete('/newClasses/denied/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { nid: id };
       const result = await classesCollection.deleteOne(query);
-      res.send(result);
+      return res.send(result);
     })
 
     app.delete('/userDelete/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await usersCollection.deleteOne(query);
-      res.send(result);
+      return res.send(result);
     })
 
     // await client.db("admin").command({ ping: 1 });
