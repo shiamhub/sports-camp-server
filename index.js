@@ -40,7 +40,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    client.connect();
 
     const classesCollection = client.db("sportsDB").collection("classes");
     const usersCollection = client.db("sportsDB").collection("users");
@@ -78,7 +78,7 @@ async function run() {
       const result = await classesCollection.find({}).toArray();
       res.send(result);
     })
-    app.get('/classes', verifyJWT, async (req, res) => {
+    app.get('/classes', verifyJWT, verifyRole, async (req, res) => {
       const result = await classesCollection.find({}).toArray();
       res.send(result);
     })
@@ -104,7 +104,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/user/role/:email', verifyJWT, async (req, res) => {
+    app.get('/user/role/:email', verifyJWT, verifyRole, async (req, res) => {
       const email = req.params.email;
 
       const decodedEmail = req.decoded.email;
@@ -123,14 +123,35 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/newClasses/:id', verifyJWT, async (req, res) => {
+    app.get('/newClasses/:id', verifyJWT, verifyRole, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await newCollection.findOne(query);
       res.send(result);
     })
 
-    app.post('/newClasses', verifyJWT, async (req, res) => {
+    app.get('/paymentHistory', async (req, res) => {
+      const inResult = await paymentsCollection.find({}).toArray();
+
+      for(let i of inResult){
+        const findGet = i.addCartItems;
+        const query = {
+          _id: { $in: findGet?.map(a => new ObjectId(a)) }
+        }
+        // console.log(query);
+        const result = await classesCollection.find(query).toArray();
+        // console.log(result);
+        return res.send(result);
+      }
+    })
+
+    app.get('/myClasses', verifyJWT, verifyRole, async (req, res) => {
+      const query = { instructorEmail: req.query.email };
+      const result = await classesCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.post('/newClasses', verifyJWT, verifyRole, async (req, res) => {
       const newClass = req.body;
       const result = await newCollection.insertOne(newClass);
       res.send(result);
@@ -171,18 +192,17 @@ async function run() {
       res.send({ clientSecret: paymentIntent.client_secret })
     });
 
-    app.post('/payments', verifyJWT, async (req, res) => {
+    app.post('/payments', verifyJWT,  async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentsCollection.insertOne(payment);
-
       const query = {
         _id: { $in: payment.cartItems.map(item => new ObjectId(item)) }
       }
       const deleteResult = await cartCollection.deleteMany(query);
-      res.send({insertResult, deleteResult});
+      res.send({ insertResult, deleteResult });
     })
 
-    app.patch('/user/admin/:id', async (req, res) => {
+    app.patch('/user/admin/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -192,7 +212,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/user/instructor/:id', async (req, res) => {
+    app.patch('/user/instructor/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -201,7 +221,7 @@ async function run() {
       const result = await newCollection.updateOne(query, updateDoc);
       res.send(result);
     })
-    app.patch('/newClasses/approved/:id', async (req, res) => {
+    app.patch('/newClasses/approved/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -210,7 +230,7 @@ async function run() {
       const result = await newCollection.updateOne(query, updateDoc);
       res.send(result);
     })
-    app.patch('/newClasses/denied/:id', async (req, res) => {
+    app.patch('/newClasses/denied/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -241,7 +261,7 @@ async function run() {
       res.send(result);
     })
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // await client.close();
