@@ -1,7 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
-require('dotenv').config();
 const cors = require('cors');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 
@@ -12,22 +13,24 @@ app.use(cors());
 
 const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
+  // console.log("16", '--------', authorization);
   if (!authorization) {
     return res.status(401).send({ error: true, message: 'unauthorized access' });
   }
   const token = authorization.split(' ')[1];
+  // console.log("21", '--------',token);
 
   jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
     if (err) {
       return res.status(401).send({ error: true, message: 'unauthorized access' })
     }
+    // console.log("27", '--------', decoded);
     req.decoded = decoded;
 
     next();
   })
 }
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.USER_DB}:${process.env.PASS_DB}@cluster0.np7fjqr.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
@@ -75,7 +78,7 @@ async function run() {
     }
 
     app.get('/class', async (req, res) => {
-      const result = await classesCollection.find({}).sort({ availableSeats: 1 }).toArray();
+      const result = await classesCollection.find({}).sort({ availableSeats: -1 }).toArray();
       return res.send(result);
     })
     app.get('/classes', verifyJWT, verifyRole, async (req, res) => {
@@ -131,15 +134,16 @@ async function run() {
     })
 
     app.get('/paymentsHistory', verifyJWT, async (req, res) => {
-      const query = { email: req?.query?.email };
-      const inResult = await paymentsCollection.find(query).sort({ date: -1 }).toArray();
-      
-      for(let i of inResult) {
-        const id = i.addCartItems;
-        const query = { _id: new ObjectId(id) };
-        const result = await classesCollection.find(query).toArray();
-        return res.send({inResult, result});
+      const inQuery = { email: req?.query?.email };
+      const inResult = await paymentsCollection.find(inQuery).sort({ date: 1 }).toArray();
+
+      const query = {
+        _id: { $in: inResult.map(i => new ObjectId(i.addCartItems)) }
       }
+
+      const result = await classesCollection.find(query).toArray();
+      // classesCollection.updateOne(query, { $inc: { availableSeats: -1 } })
+      return res.send({inResult, result});
     })
 
     app.get('/myClasses', verifyJWT, verifyRole, async (req, res) => {
@@ -205,13 +209,15 @@ async function run() {
     app.post('/payments', verifyJWT, async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentsCollection.insertOne(payment);
-      // const query = {
-      //   _id: { $in: new ObjectId(payment.cartItems) }
-      // }
+      
       const query = { _id: new ObjectId(payment.cartItems) }
+      const addQuery = { _id: new ObjectId(payment.addCartItems) }
+
+      const result = await classesCollection.find(addQuery).toArray();
+      classesCollection.updateOne(addQuery, { $inc: { availableSeats: -1 } })
 
       const deleteResult = await cartCollection.deleteMany(query);
-      return res.send({ insertResult, deleteResult });
+      return res.send({ insertResult, result, deleteResult });
     })
 
     app.patch('/user/admin/:id', verifyJWT, async (req, res) => {
@@ -230,7 +236,7 @@ async function run() {
       const updateDoc = {
         $set: { role: 'instructor' }
       }
-      const result = await newCollection.updateOne(query, updateDoc);
+      const result = await usersCollection.updateOne(query, updateDoc);
       return res.send(result);
     })
     app.patch('/newClasses/approved/:id', verifyJWT, async (req, res) => {
