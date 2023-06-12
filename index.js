@@ -43,7 +43,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    client.connect();
+    // client.connect();
 
     const classesCollection = client.db("sportsDB").collection("classes");
     const usersCollection = client.db("sportsDB").collection("users");
@@ -246,7 +246,6 @@ async function run() {
       const updateDoc = {
         $set: { status: 'approved', feedBack: "" }
       }
-      console.log(updateDoc);
       const result = await newCollection.updateOne(query, updateDoc);
       return res.send(result);
     })
