@@ -7,8 +7,8 @@ const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 
 const port = process.env.PORT || 5000;
 
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
 const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
@@ -75,7 +75,7 @@ async function run() {
     }
 
     app.get('/class', async (req, res) => {
-      const result = await classesCollection.find({}).toArray();
+      const result = await classesCollection.find({}).sort({ availableSeats: 1 }).toArray();
       return res.send(result);
     })
     app.get('/classes', verifyJWT, verifyRole, async (req, res) => {
@@ -130,27 +130,21 @@ async function run() {
       return res.send(result);
     })
 
-    app.get('/paymentsHistory', async (req, res) => {
-      const query = { email: req.query.email };
-      const inResult = await paymentsCollection.find(query).toArray();
-      // console.log(inResult);
-
-      for(let i of inResult){
-        const findGet = i.addCartItems;
-        const query = {
-          _id: { $in: findGet?.map(a => new ObjectId(a)) }
-        }
-        console.log(query);
-        const result = await classesCollection.find(query).toArray();
-        // console.log(result);
-        return res.send(result);
-      }
+    app.get('/paymentsHistory', verifyJWT, async (req, res) => {
+      const query = { email: req?.query?.email };
+      const inResult = await paymentsCollection.find(query).sort({ date: -1 }).toArray();
       
+      for(let i of inResult) {
+        const id = i.addCartItems;
+        const query = { _id: new ObjectId(id) };
+        const result = await classesCollection.find(query).toArray();
+        return res.send({inResult, result});
+      }
     })
 
     app.get('/myClasses', verifyJWT, verifyRole, async (req, res) => {
       const query = { instructorEmail: req.query.email };
-      const result = await classesCollection.find(query).toArray();
+      const result = await newCollection.find(query).toArray();
       return res.send(result);
     })
 
@@ -208,10 +202,9 @@ async function run() {
       return res.send({ clientSecret: paymentIntent.client_secret })
     });
 
-    app.post('/payments', verifyJWT,  async (req, res) => {
+    app.post('/payments', verifyJWT, async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentsCollection.insertOne(payment);
-      console.log(insertResult);
       // const query = {
       //   _id: { $in: new ObjectId(payment.cartItems) }
       // }
@@ -242,10 +235,12 @@ async function run() {
     })
     app.patch('/newClasses/approved/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
+      const body = req.body;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
-        $set: { status: 'approved' }
+        $set: { status: 'approved', feedBack: "" }
       }
+      console.log(updateDoc);
       const result = await newCollection.updateOne(query, updateDoc);
       return res.send(result);
     })
@@ -254,6 +249,26 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: { status: 'denied' }
+      }
+      const result = await newCollection.updateOne(query, updateDoc);
+      return res.send(result);
+    })
+    app.put('/newClasses/denied/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = req.body;
+      const updateDoc = {
+        $set: {
+          image: update.image,
+          instructorName: update.instructorName,
+          instructorImage: update.instructorImage,
+          instructorEmail: update.instructorEmail,
+          price : update.price,
+          className: update.className,
+          availableSeats: update.availableSeats,
+          feedBack: update.feedBack,
+          status: update.status
+        }
       }
       const result = await newCollection.updateOne(query, updateDoc);
       return res.send(result);
